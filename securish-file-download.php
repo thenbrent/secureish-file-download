@@ -2,10 +2,12 @@
 /*
 Plugin Name: Secure-ish File Downloads
 Plugin URI: 
-Description: Semi-secure file downloads. Based on the Filedownload plugin by <a href="http://www.worldweb-innovation.de/">Peter Gross</a>
+Description: Semi-secure file downloads. Based on the Filedownload plugin by <a href="http://www.worldweb-innovation.de/">Peter Gross</a>. This plugin does not work. Do not use this plugin yet.
 Version: 0.1
 Author: Anthony Cole, pwnd from Brent Shepherd
 Author URI: http://find.brentshepherd.com
+
+
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
