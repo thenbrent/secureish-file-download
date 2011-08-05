@@ -2,12 +2,13 @@
 /*
 Plugin Name: Secure-ish File Downloads
 Plugin URI: 
-Description: Semi-secure file downloads. Based on the Filedownload plugin by <a href="http://www.worldweb-innovation.de/">Peter Gross</a>. This plugin does not work. Do not use this plugin yet.
+Description: Semi-secure file downloads. Based on the Filedownload plugin by <a href="http://www.worldweb-innovation.de/">Peter Gross</a>
 Version: 0.1
 Author: Anthony Cole, pwnd from Brent Shepherd
 Author URI: http://find.brentshepherd.com
 
 
+- Notes: this does not work yet. Do not use this. It is by all means a WIP.
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -28,15 +29,35 @@ Secure_File_Download::init();
 
 class Secure_File_Download {
 	
+	CONST OPTION_NAME = 'secure_file_download';
+	
+	protected static $option;
+	
+	/**
+	 * Our init action - this action fires off all actions and brings the shortcode to life.
+	 *
+	 * @return void
+	 * @author Anthony Cole
+	 **/
+	
 	public static function init() {
+		$this->option = get_option( self::OPTION_NAME );
+		
 		add_action( 'init',  __CLASS__ . '::add_lanugage_files' );
 		add_action( 'save_post', __CLASS__ . '::generate_post_hash', 0, 10 );
 		
 		add_shortcode( 'download', __CLASS__ . '::shortcode_handler' );
 	}
 	
+	/**
+	 * Add language file
+	 *
+	 * @return void
+	 * @author Anthony Cole
+	 **/
+	
 	public static function add_language_files() {
-		load_plugin_textdomain( 'secure-file-download' );
+		load_plugin_textdomain( 'sfd' );
 	}
 	
 	public static function shortcode_handler( $atts, $content = null ) {
@@ -68,16 +89,42 @@ class Secure_File_Download {
 
 		fclose( $open );
 
-		return '<a href=' . site_url( 'download' ) .">$span$content</span></a>";
+		return '<a href="' . site_url( 'download' ) .'">' . $span . $content . '</span></a';
+		
 	}
 	
+	/**
+	 * Generates a post hash.
+	 *
+	 * @return void
+	 * @author Anthony Cole
+	 **/
+	
 	public static function generate_post_hash( $post_id, $post ) {
-		if( preg_match( '#\[ *download([^\]])*\]#i', $post->post_content ) ){ // Speed over accuracy with strpos vs. preg_match
-			error_log('post = ' . print_r( $post, true ) );
-			error_log(' ** post contains download shortcode ' );
-			update_option();
+		if( preg_match( '#\[ *download([^\]])*\]#i', $post->post_content ) ){ // Speed over accuracy with strpos vs. preg_match	
+						
+			// brent, I'm assuming you're doing something with updating an array key-value store of files here. IMMA LET YOU FINISH BUTTT...
+			
+			// this is actually generating the hash. For now, we're not going to let them have to filenames and 
+			
+			self::$option[$post_hash] = $filename;
+			 
+			$post_hash = md5( $filename . time() );
+			
+			if( array_key_exists( $post_hash ) )
+				wp_die('All your base are belong... erhm, sorry. I mean, you are already linking to a file with that name.');
+			
+			update_option( self::OPTION_NAME, $this::$option );
+			
 		}
 	}
+	
+	/**
+	 * Generates a post hash.
+	 *
+	 * @return void
+	 * @author Anthony Cole
+	 **/
 	
 	public static function download_query_param_set() {
 		$type = ( isset( $_GET['type'] ) ) ? $_GET['type'] : '';
@@ -759,8 +806,6 @@ class Secure_File_Download {
 			default: return "application/$ext";
 		}
 	}
-	
-	
 }
 
 ?>
