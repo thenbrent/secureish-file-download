@@ -105,7 +105,7 @@ class Secure_File_Download {
 						
 			// brent, I'm assuming you're doing something with updating an array key-value store of files here. IMMA LET YOU FINISH BUTTT...
 			
-			// this is actually generating the hash. For now, we're not going to let them have to filenames and 
+			// this is actually generating the hash. For now, we're not going to let them have redunant filenames 
 			
 			self::$option[$post_hash] = $filename;
 			 
