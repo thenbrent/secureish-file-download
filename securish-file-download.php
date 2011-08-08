@@ -39,14 +39,21 @@ class Secure_File_Download {
 	 * @return void
 	 * @author Anthony Cole
 	 **/
-	
 	public static function init() {
+
 		self::$option = get_option( self::OPTION_NAME );
-		
-		add_action( 'init',  __CLASS__ . '::add_language_files' );
-		add_action( 'save_post', __CLASS__ . '::generate_post_hash', 0, 10 );
-		
-		add_shortcode( 'download', __CLASS__ . '::shortcode_handler' );
+
+		add_action( 'init', __CLASS__ . '::add_language_files' );
+
+		add_filter( 'query_vars', __CLASS__ . '::query_var' );
+
+		add_action( 'init', __CLASS__ . '::flush_rules' );
+
+		add_action( 'generate_rewrite_rules', __CLASS__ . '::add_rewrite_rules' );
+
+		add_action( 'template_redirect', __CLASS__ . '::get_download' );
+
+		add_shortcode( 'secure_download', __CLASS__ . '::shortcode_handler' );
 	}
 	
 	/**
@@ -55,7 +62,6 @@ class Secure_File_Download {
 	 * @return void
 	 * @author Anthony Cole
 	 **/
-	
 	public static function add_language_files() {
 		load_plugin_textdomain( 'sfd' );
 	}
@@ -64,113 +70,130 @@ class Secure_File_Download {
 	/**
 	 * Generate the hashed download link and replace the [download file=""] shortcode.
 	 * 
+	 * @param atts array Contains the download links attributes, which includes:
+	 *             file string Either the URL or file system path to the file.
+	 *             login_required boolean Whether a user must be logged in to download the file. Default false.
 	 * @return string an anchor tag with with hashed download link
 	 * @author Brent Shepherd
 	 */
 	public static function shortcode_handler( $atts, $content = null ) {
+		
 		extract( shortcode_atts( array(
-				'file'    => '', 
-				'type'    => '', 
-				'style'   => '',
-				'element' => 'button' ), 
+				'file'           => '',
+				'login_required' => false,
+				'id'             => '',
+				'style'          => '',
+				'class'          => ''),
 				$atts ) );
-
-		$span = ( $style == '' ) ? '<span>' : "<span style='$style'>";
-
-		$referer = $_SERVER['REQUEST_URI'];
-
-		$plugin_dir = WP_PLUGIN_URL;
-
-		if ( $content === null )
-			$content = __( 'Download', 'sfd' );
 
 		if ( $file == '' )
 			return '<b>' . __( 'Secure File Download Error: parameter file is empty!', 'sfd' ) . '</b>';
 
-		if ( substr( $file, 0,7 ) == "http://" ) 
-			$path = $file;
-		elseif ( substr( $file, 0,1 ) == "/" )
-		   $path = WP_CONTENT_URL . $file;
-		else
-			$path = WP_CONTENT_URL . '/' . $file;
+		if ( $content == null )
+			$content = __( 'Download', 'sfd' );
 
-		if( ( $open = @fopen ( $path, "r" ) ) === false )
-			return sprintf( __( "Secure File Download Error: file '%s' does not exist!", 'sfd' ), $path );
+		$attributes  = ( $id != '' )    ? " id='$id'" : '';
+		$attributes .= ( $class != '' ) ? " class='$class'" : '';
+		$attributes .= ( $style != '' ) ? " style='$style'" : '';
 
-		fclose( $open );
+		$hashed_path = md5( $file . NONCE_SALT );
 
-		return '<a href="' . site_url( 'download' ) .'">' . $span . $content . '</span></a>';
-		
+		add_option( $hashed_path, array( 'file' => $file, 'login_required' => $login_required ) ); // Specifically not updating the option on every page load to save on DB loads
+
+		return sprintf( '<a%s href="%s">%s</a>', $attributes, site_url( 'secure-download/' . $hashed_path ), do_shortcode( $content ) );
 	}
-	
+
+
 	/**
-	 * Generates a hash for the file name and then stored in the postmeta table. 
-	 * 
-	 * This function is hooked to save_post so that a hash is not generated every time a post is loaded on the front end.
+	 * Outputs the file if the URL includes a valid hash.
 	 *
 	 * @return void
 	 * @author Anthony Cole
 	 **/
-	
-	public static function generate_post_hash( $post_id, $post ) {
+	public static function get_download() {
+		global $wp_query;
 
-		// Post contains a [download] shortcode
-		if( preg_match( '#\[ *download([^\]])*\]#i', $post->post_content ) ){ // speed over accuracy with strpos vs. preg_match
+		if( ! isset( $wp_query->query_vars['secure-download'] ) )
+			return;
 
-			// brent, I'm assuming you're doing something with updating an array key-value store of files here. IMMA LET YOU FINISH BUTTT...
-			
-			// this is actually generating the hash. For now, we're not going to let them have redunant filenames 
-			
-			//self::$option[$post_hash] = $filename;
-			 
-			//$filename_hash = md5( $filename . NONCE_SALT );
-			
-			//if( array_key_exists( $filename_hash ) )
-			//	wp_die( 'All your base are belong... erhm, sorry. I mean, you are already linking to a file with that name.' );
-			
-			//update_option( self::OPTION_NAME, $this::$option );
-			
-		}
-	}
-	
-	/**
-	 * Generates a post hash.
-	 *
-	 * @return void
-	 * @author Anthony Cole
-	 **/
-	
-	public static function download_query_param_set() {
-		$type = ( isset( $_GET['type'] ) ) ? $_GET['type'] : '';
-		$path = ( isset( $_GET['path'] ) ) ? $_GET['path'] : '';
+		$secure_download = get_option( $wp_query->query_vars['secure-download'] );
 
-		$path_parts = pathinfo( $path );
+		error_log( '$secure_download = ' . print_r( $secure_download, true ) );
+
+		if( empty( $secure_download['file'] ) )
+			wp_die( sprintf( __( 'Secure File Download Error: no path provided. Did you specify a %sfile=""%s parameter in the shortcode?', 'sfd' ), '<code>', '</code>' ) );
+
+		if( $secure_download['login_required'] && ! is_user_logged_in() )
+			wp_die( sprintf( __( 'Secure File Download Error: you must be logged in to download this file.', 'sfd' ), '<b>', '</b>' ) );
+
+		$path_parts = pathinfo( $secure_download['file'] );
+
+		error_log( '$path_parts = ' . print_r( $path_parts, true ) );
+
 		$extension  = $path_parts['extension'];
 		$filename   = $path_parts['filename'].'.'.$path_parts['extension'];
 
-		if ($type == "") $type = self::get_mime_type($extension);
+		$type = self::get_mime_type( $extension );
 
-		$open = @fopen( $path, 'r' );
+		if( ( $open = @fopen( $secure_download['file'], 'r' ) ) === false )
+			wp_die( sprintf( __( 'Secure File Download Error: file %s does not exist!', 'sfd' ), '<code>' . $secure_download['file'] . '</code>' ) );
 
-		if( $open ) {
-			fclose( $open );
+		fclose( $open );
 
-			// Write statistic in database
-			update_option( $path_parts['filename'], get_option( $path_parts['filename'] . '_download_count', 0 ) + 1 );
+		// Write download count stat to database
+		update_option( $path_parts['filename'] . '_download_count', get_option( $path_parts['filename'] . '_download_count', 0 ) + 1 );
 
-			// start download
-			header("Content-Type: $type");
-			header("Content-Disposition: attachment; filename=\"$filename\"");
-			readfile($path);
-		} else {
-			wp_safe_redirect( $_GET['referer'] );
-			//   header("Content-Type: text/plain");
-			//   header("Content-Disposition: attachment; filename=\"DownloadError.txt\"");
-			//   print("Sorry, die Datei $file existiert nicht. Weitere Informationen kann Ihnen nur der Autor der Downloadseite geben.");
-		}  
+		// Start download
+		header( "Content-Type: $type" );
+		header( "Content-Disposition: attachment; filename=\"$filename\"" );
+		readfile( $secure_download['file'] );
+
 		exit();
 	}
-	
+
+
+	/**
+	 * Adds the 'secure-download' rewrite tag to WordPress.
+	 *
+	 * @author Brent Shepherd
+	 */
+	public static function query_var( $vars ) {
+		$vars[] = 'secure-download';
+		return $vars;
+	}
+
+
+	/**
+	 * Tell WordPress how to handle requests for the 'secure-download' rewrite tag.
+	 *
+	 * @author Brent Shepherd
+	 */
+	public static function add_rewrite_rules( $wp_rewrite ) {
+		$new_rules = array( 'secure-download/(.*)' => 'index.php?secure-download=' . $wp_rewrite->preg_index(1) );
+		$wp_rewrite->rules = $new_rules + $wp_rewrite->rules;
+	}
+
+
+	/**
+	 * Flush rewrite rules if the secure-download rule is not included.
+	 *
+	 * @author Brent Shepherd
+	 */
+	public static function flush_rules() {
+		$rules = get_option( 'rewrite_rules' );
+
+		if ( ! isset( $rules['secure-download/(.+)'] ) ) {
+			global $wp_rewrite;
+			$wp_rewrite->flush_rules();
+		}
+	}
+
+
+	/**
+	 * Get the full mime-type string associated with a given extension.
+	 *
+	 * @author Brent Shepherd
+	 */
 	public static function get_mime_type( $extension ) {
 		
 		switch ( $extension ) {
