@@ -41,9 +41,9 @@ class Secure_File_Download {
 	 **/
 	
 	public static function init() {
-		$this->option = get_option( self::OPTION_NAME );
+		self::$option = get_option( self::OPTION_NAME );
 		
-		add_action( 'init',  __CLASS__ . '::add_lanugage_files' );
+		add_action( 'init',  __CLASS__ . '::add_language_files' );
 		add_action( 'save_post', __CLASS__ . '::generate_post_hash', 0, 10 );
 		
 		add_shortcode( 'download', __CLASS__ . '::shortcode_handler' );
@@ -59,7 +59,14 @@ class Secure_File_Download {
 	public static function add_language_files() {
 		load_plugin_textdomain( 'sfd' );
 	}
-	
+
+
+	/**
+	 * Generate the hashed download link and replace the [download file=""] shortcode.
+	 * 
+	 * @return string an anchor tag with with hashed download link
+	 * @author Brent Shepherd
+	 */
 	public static function shortcode_handler( $atts, $content = null ) {
 		extract( shortcode_atts( array(
 				'file'    => '', 
@@ -73,6 +80,9 @@ class Secure_File_Download {
 		$referer = $_SERVER['REQUEST_URI'];
 
 		$plugin_dir = WP_PLUGIN_URL;
+
+		if ( $content === null )
+			$content = __( 'Download', 'sfd' );
 
 		if ( $file == '' )
 			return '<b>' . __( 'Secure File Download Error: parameter file is empty!', 'sfd' ) . '</b>';
@@ -89,32 +99,36 @@ class Secure_File_Download {
 
 		fclose( $open );
 
-		return '<a href="' . site_url( 'download' ) .'">' . $span . $content . '</span></a';
+		return '<a href="' . site_url( 'download' ) .'">' . $span . $content . '</span></a>';
 		
 	}
 	
 	/**
-	 * Generates a post hash.
+	 * Generates a hash for the file name and then stored in the postmeta table. 
+	 * 
+	 * This function is hooked to save_post so that a hash is not generated every time a post is loaded on the front end.
 	 *
 	 * @return void
 	 * @author Anthony Cole
 	 **/
 	
 	public static function generate_post_hash( $post_id, $post ) {
-		if( preg_match( '#\[ *download([^\]])*\]#i', $post->post_content ) ){ // Speed over accuracy with strpos vs. preg_match	
-						
+
+		// Post contains a [download] shortcode
+		if( preg_match( '#\[ *download([^\]])*\]#i', $post->post_content ) ){ // speed over accuracy with strpos vs. preg_match
+
 			// brent, I'm assuming you're doing something with updating an array key-value store of files here. IMMA LET YOU FINISH BUTTT...
 			
 			// this is actually generating the hash. For now, we're not going to let them have redunant filenames 
 			
-			self::$option[$post_hash] = $filename;
+			//self::$option[$post_hash] = $filename;
 			 
-			$post_hash = md5( $filename . time() );
+			//$filename_hash = md5( $filename . NONCE_SALT );
 			
-			if( array_key_exists( $post_hash ) )
-				wp_die('All your base are belong... erhm, sorry. I mean, you are already linking to a file with that name.');
+			//if( array_key_exists( $filename_hash ) )
+			//	wp_die( 'All your base are belong... erhm, sorry. I mean, you are already linking to a file with that name.' );
 			
-			update_option( self::OPTION_NAME, $this::$option );
+			//update_option( self::OPTION_NAME, $this::$option );
 			
 		}
 	}
