@@ -140,13 +140,17 @@ class Secure_File_Download {
 
 		fclose( $open );
 
-		// Write download count stat to database
-		update_option( $path_parts['filename'] . '_download_count', get_option( $path_parts['filename'] . '_download_count', 0 ) + 1 );
-
 		// Start download
 		header( "Content-Type: $type" );
 		header( "Content-Disposition: attachment; filename=\"$filename\"" );
 		readfile( $secure_download['file'] );
+
+		// Write download count stat to database
+		$download_count = get_option( 'sfd_download_count', array() );
+
+		$download_count[$path_parts['filename']] = ( isset( $download_count[$path_parts['filename']] ) ) ? $download_count[$path_parts['filename']]++ : 1;
+
+		update_option( 'sfd_download_count', $download_count );
 
 		exit();
 	}
@@ -182,7 +186,7 @@ class Secure_File_Download {
 	public static function flush_rules() {
 		$rules = get_option( 'rewrite_rules' );
 
-		if ( ! isset( $rules['secure-download/(.+)'] ) ) {
+		if ( ! isset( $rules['secure-download/(.*)'] ) ) {
 			global $wp_rewrite;
 			$wp_rewrite->flush_rules();
 		}
@@ -845,4 +849,3 @@ class Secure_File_Download {
 	}
 }
 
-?>
