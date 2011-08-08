@@ -77,7 +77,7 @@ class Secure_File_Download {
 	 * @author Brent Shepherd
 	 */
 	public static function shortcode_handler( $atts, $content = null ) {
-		
+
 		extract( shortcode_atts( array(
 				'file'           => '',
 				'login_required' => false,
@@ -118,8 +118,6 @@ class Secure_File_Download {
 
 		$secure_download = get_option( $wp_query->query_vars['secure-download'] );
 
-		error_log( '$secure_download = ' . print_r( $secure_download, true ) );
-
 		if( empty( $secure_download['file'] ) )
 			wp_die( sprintf( __( 'Secure File Download Error: no path provided. Did you specify a %sfile=""%s parameter in the shortcode?', 'sfd' ), '<code>', '</code>' ) );
 
@@ -127,8 +125,6 @@ class Secure_File_Download {
 			wp_die( sprintf( __( 'Secure File Download Error: you must be logged in to download this file.', 'sfd' ), '<b>', '</b>' ) );
 
 		$path_parts = pathinfo( $secure_download['file'] );
-
-		error_log( '$path_parts = ' . print_r( $path_parts, true ) );
 
 		$extension  = $path_parts['extension'];
 		$filename   = $path_parts['filename'].'.'.$path_parts['extension'];
