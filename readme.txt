@@ -1,4 +1,4 @@
-=== Filedownload ===
+=== Secure(ish) File Download ===
 Contributors: thenbrent, anthonycole
 Tags: download, file download, download counter, picture download, file types, shortcode
 Requires at least: 3.1
@@ -40,7 +40,7 @@ To obscure the filename in the download URL, set the `hash_permalink` attribute 
 This will change the download URL from `http://example.com/secure-download/file.zip` to something like `http://example.com/secure-download/97386dcaf6711efe4d3af808f5dc09ce`. As the hash does not change over time, this has arguable value in securing your files.
 
 == Installation ==
-= (en) =
+
 1. Unzip and upload `/filedownload/` to the `/wp-content/plugins/` directory
 2. Activate the plugin through the 'Plugins' menu in WordPress
 3. Add a [secure_download] shortcode to your pages or posts (see example shortcodes for details)
@@ -49,4 +49,4 @@ This will change the download URL from `http://example.com/secure-download/file.
 == Changelog ==
 
 = 0.1 =
-- First version.
+First version.

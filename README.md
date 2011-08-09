@@ -1,4 +1,4 @@
-=== Filedownload ===
+# Secure(ish) File Download
 Contributors: thenbrent, anthonycole
 Tags: download, file download, download counter, picture download, file types, shortcode
 Requires at least: 3.1
@@ -7,13 +7,13 @@ Stable tag: 0.1
 
 Use [shortcodes](http://codex.wordpress.org/Shortcode) to protect the URI of your file downloads and require a user to be logged in.
 
-== Description ==
+## Description
 
 Information wants to be free. On the one hand bandwidth wants to be expensive. Secure(ish) File Download prevents unauthorised downloading of files on your website.
 
 There is no interface, simply use [shortcodes](http://codex.wordpress.org/Shortcode) to offer a range of file downloads on your site.
 
-= Examples =
+### Examples
 
 The simplest shortcode possible is to specify only the `file` attribute:
 
@@ -39,14 +39,14 @@ To obscure the filename in the download URL, set the `hash_permalink` attribute 
 
 This will change the download URL from `http://example.com/secure-download/file.zip` to something like `http://example.com/secure-download/97386dcaf6711efe4d3af808f5dc09ce`. As the hash does not change over time, this has arguable value in securing your files.
 
-== Installation ==
-= (en) =
+### Installation 
+
 1. Unzip and upload `/filedownload/` to the `/wp-content/plugins/` directory
 2. Activate the plugin through the 'Plugins' menu in WordPress
 3. Add a [secure_download] shortcode to your pages or posts (see example shortcodes for details)
 
 
-== Changelog ==
+### Changelog
 
 = 0.1 =
-- First version.
+First version.
