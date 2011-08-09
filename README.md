@@ -16,7 +16,7 @@ The value of the `file` attribute can be either an absolute path on your file sy
 
 If you would like the file to begin download automatically, add an `id` and `auto_download` attribute. The `auto_download` attribute should be a time is seconds longer than 0 that specifies the period to wait before commencing the download.
 
-`[secure_download id="ego" auto_download="3000" file="http://example.com/file.zip" ]The image should begin downloading automatically after 3 seconds. If it does not, click here.[/secure_download]`
+`[secure_download id="ego" auto_download="3000" file="http://example.com/file.zip" ]The file should begin downloading automatically after 3 seconds. If it does not, click here.[/secure_download]`
 
 To remove the authentication requirement, you can set the `login_required` attribute to `false`. 
 
