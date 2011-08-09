@@ -1,14 +1,11 @@
 <?php
 /*
-Plugin Name: Secure-ish File Downloads
+Plugin Name: Secure(ish) File Downloads
 Plugin URI: 
-Description: Semi-secure file downloads. Based on the Filedownload plugin by <a href="http://www.worldweb-innovation.de/">Peter Gross</a>
+Description: Semi-secure file downloads. Require uses to login and hide URLs behind a hash. Based on the Filedownload plugin by <a href="http://www.worldweb-innovation.de/">Peter Gross</a>.
 Version: 0.1
-Author: Anthony Cole, pwnd from Brent Shepherd
+Author: Anthony Cole, Brent Shepherd
 Author URI: http://find.brentshepherd.com
-
-
-- Notes: this does not work yet. Do not use this. It is by all means a WIP.
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -28,11 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 Secure_File_Download::init();
 
 class Secure_File_Download {
-	
-	CONST OPTION_NAME = 'secure_file_download';
-	
-	protected static $option;
-	
+
 	/**
 	 * Our init action - this action fires off all actions and brings the shortcode to life.
 	 *
@@ -41,29 +34,55 @@ class Secure_File_Download {
 	 **/
 	public static function init() {
 
-		self::$option = get_option( self::OPTION_NAME );
+		add_shortcode( 'secure_download', __CLASS__ . '::shortcode_handler' );
+
+		add_action( 'save_post', __CLASS__ . '::save_download_details', 10, 2 );
+
+		add_action( 'template_redirect', __CLASS__ . '::do_download' );
 
 		add_action( 'init', __CLASS__ . '::add_language_files' );
 
-		add_filter( 'query_vars', __CLASS__ . '::query_var' );
-
 		add_action( 'init', __CLASS__ . '::flush_rules' );
 
+		add_filter( 'query_vars', __CLASS__ . '::query_var' );
+
 		add_action( 'generate_rewrite_rules', __CLASS__ . '::add_rewrite_rules' );
-
-		add_action( 'template_redirect', __CLASS__ . '::get_download' );
-
-		add_shortcode( 'secure_download', __CLASS__ . '::shortcode_handler' );
 	}
-	
+
+
 	/**
-	 * Add language file
-	 *
-	 * @return void
-	 * @author Anthony Cole
-	 **/
-	public static function add_language_files() {
-		load_plugin_textdomain( 'sfd' );
+	 * Store the file's full path/URI and other details when the post is saved.
+	 * 
+	 * Although it requires manually parsing the shortcode in content, it is efficient to perform this 
+	 * database write only when the shortcode has potentially changed (when a post is saved) rather than 
+	 * doing it for every page view in the shortcode handler.
+	 */
+	public static function save_download_details( $post_id, $post ){
+		global $shortcode_tags;
+
+		$matches = array();
+
+		$original_tags  = $shortcode_tags;
+		$shortcode_tags = array( '[secure_download]' => __CLASS__ . '::shortcode_handler' );
+		preg_match_all( '/' . get_shortcode_regex() . '/', $post->post_content, $matches ); // See get_shortcode_regex()
+		$shortcode_tags = $original_tags;
+
+		if( isset( $matches[3] ) && is_array( $matches[3] ) ) {
+			foreach( $matches[3] as $attributes ) {
+
+				extract( self::get_attributes( shortcode_parse_atts( $attributes ) ) );
+
+				if( $hash_permalink === true || $hash_permalink === 'true'  ) {
+					$filename = md5( $file . NONCE_SALT );
+				} else {
+					$path_parts = pathinfo( $file );
+					$extension  = $path_parts['extension'];
+					$filename   = $path_parts['filename'].'.'.$path_parts['extension'];
+				}
+
+				update_option( $filename, array( 'file' => $file, 'login_required' => $login_required ) ); // Specifically not updating the option on every page load to save on DB loads
+			}
+		}
 	}
 
 
@@ -71,20 +90,15 @@ class Secure_File_Download {
 	 * Generate the hashed download link and replace the [download file=""] shortcode.
 	 * 
 	 * @param atts array Contains the download links attributes, which includes:
-	 *             file string Either the URL or file system path to the file.
-	 *             login_required boolean Whether a user must be logged in to download the file. Default false.
+	 *             'file' string Either the URL or file system path to the file.
+	 *             'login_required' boolean Whether a user must be logged in to download the file. Default true.
+	 *             'auto_download' integer The time in milliseconds after which the file should begin downloading automatically eg. 5000 will download the file after 5 seconds. Default 0 - never download automatically.
 	 * @return string an anchor tag with with hashed download link
 	 * @author Brent Shepherd
 	 */
 	public static function shortcode_handler( $atts, $content = null ) {
 
-		extract( shortcode_atts( array(
-				'file'           => '',
-				'login_required' => false,
-				'id'             => '',
-				'style'          => '',
-				'class'          => ''),
-				$atts ) );
+		extract( self::get_attributes( $atts ) );
 
 		if ( $file == '' )
 			return '<b>' . __( 'Secure File Download Error: parameter file is empty!', 'sfd' ) . '</b>';
@@ -96,11 +110,16 @@ class Secure_File_Download {
 		$attributes .= ( $class != '' ) ? " class='$class'" : '';
 		$attributes .= ( $style != '' ) ? " style='$style'" : '';
 
-		$hashed_path = md5( $file . NONCE_SALT );
+		$download_link = sprintf( '<a%s href="%s">%s</a>', $attributes, site_url( 'secure-download/' . $filename ), do_shortcode( $content ) );
 
-		add_option( $hashed_path, array( 'file' => $file, 'login_required' => $login_required ) ); // Specifically not updating the option on every page load to save on DB loads
+		if( $auto_download != 0 ) {
+			if( $id != '' )
+				$download_link .= '<script>window.setTimeout(function(){location.href = document.getElementById("'.$id.'").href;}, '.$auto_download.');</script>';
+			else
+				return sprintf( __( '%sSecure File Download Error:%s auto download requires either an ID to be specified.', 'sfd' ), '<b>', '</b>' );
+		}
 
-		return sprintf( '<a%s href="%s">%s</a>', $attributes, site_url( 'secure-download/' . $hashed_path ), do_shortcode( $content ) );
+		return $download_link;
 	}
 
 
@@ -110,7 +129,7 @@ class Secure_File_Download {
 	 * @return void
 	 * @author Anthony Cole
 	 **/
-	public static function get_download() {
+	public static function do_download() {
 		global $wp_query;
 
 		if( ! isset( $wp_query->query_vars['secure-download'] ) )
@@ -121,11 +140,10 @@ class Secure_File_Download {
 		if( empty( $secure_download['file'] ) )
 			wp_die( sprintf( __( 'Secure File Download Error: no path provided. Did you specify a %sfile=""%s parameter in the shortcode?', 'sfd' ), '<code>', '</code>' ) );
 
-		if( $secure_download['login_required'] && ! is_user_logged_in() )
-			wp_die( sprintf( __( 'Secure File Download Error: you must be logged in to download this file.', 'sfd' ), '<b>', '</b>' ) );
+		if( ( $secure_download['login_required'] === true || $secure_download['login_required'] == 'true' ) && ! is_user_logged_in() )
+			wp_die( sprintf( __( 'Secure File Download Error: you must be logged in to download this file. %sLogin%s', 'sfd' ), '<a href="'.wp_login_url( site_url( 'secure-download/' . $wp_query->query_vars['secure-download'] ) ) . '">', '&nbsp;&raquo;</a>' ) );
 
 		$path_parts = pathinfo( $secure_download['file'] );
-
 		$extension  = $path_parts['extension'];
 		$filename   = $path_parts['filename'].'.'.$path_parts['extension'];
 
@@ -149,6 +167,50 @@ class Secure_File_Download {
 		update_option( 'sfd_download_count', $download_count );
 
 		exit();
+	}
+
+
+	/**
+	 * Parses attributes with the default attribute and also builds a filename depending on 
+	 * whether the shortcode requests a hashed download link or not.
+	 * 
+	 * Abstracted into a function as this is done both when a post is saved and when the shortcode
+	 * markup is created. 
+	 *
+	 * @return array $attributes 
+	 * @author Brent Shepherd
+	 */
+	private static function get_attributes( $atts ) {
+		$attributes = shortcode_atts( array(
+										'file'           => '',
+										'id'             => '',
+										'style'          => '',
+										'class'          => '',
+										'login_required' => 'true',
+										'hash_permalink' => 'false',
+										'auto_download'  => 0 ),
+										$atts );
+
+		if( $attributes['hash_permalink'] === true || $attributes['hash_permalink'] === 'true'  ) {
+			$attributes['filename'] = md5( $attributes['file'] . NONCE_SALT );
+		} else {
+			$attributes['path_parts'] = pathinfo( $attributes['file'] );
+			$attributes['extension']  = $attributes['path_parts']['extension'];
+			$attributes['filename']   = $attributes['path_parts']['filename'].'.'.$attributes['path_parts']['extension'];
+		}
+
+		return $attributes;
+	}
+
+
+	/**
+	 * Add language file
+	 *
+	 * @return void
+	 * @author Anthony Cole
+	 **/
+	public static function add_language_files() {
+		load_plugin_textdomain( 'sfd' );
 	}
 
 
