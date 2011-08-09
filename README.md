@@ -1,15 +1,6 @@
 # Secure(ish) File Download
-Contributors: thenbrent, anthonycole
-Tags: download, file download, download counter, picture download, file types, shortcode
-Requires at least: 3.1
-Tested up to: 3.2.1
-Stable tag: 0.1
 
-Use [shortcodes](http://codex.wordpress.org/Shortcode) to protect the URI of your file downloads and require a user to be logged in.
-
-## Description
-
-Information wants to be free. On the one hand bandwidth wants to be expensive. Secure(ish) File Download prevents unauthorised downloading of files on your website.
+Information wants to be free. On the one hand bandwidth wants to be expensive. Secure(ish) File Download prevents unauthorised downloading of files on your WordPress website.
 
 There is no interface, simply use [shortcodes](http://codex.wordpress.org/Shortcode) to offer a range of file downloads on your site.
 
