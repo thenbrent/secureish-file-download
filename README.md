@@ -32,12 +32,7 @@ This will change the download URL from `http://example.com/secure-download/file.
 
 ### Installation 
 
-1. Unzip and upload `/filedownload/` to the `/wp-content/plugins/` directory
+1. Unzip and upload `/secure-file-download/` to the `/wp-content/plugins/` directory
 2. Activate the plugin through the 'Plugins' menu in WordPress
 3. Add a [secure_download] shortcode to your pages or posts (see example shortcodes for details)
 
-
-### Changelog
-
-= 0.1 =
-First version.
