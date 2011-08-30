@@ -1,8 +1,10 @@
 # Secure(ish) File Download
 
-Information wants to be free. On the one hand bandwidth wants to be expensive. Secure(ish) File Download prevents unauthorised downloading of files on your WordPress website.
+Information wants to be free. Bandwidth wants to be expensive. 
 
-There is no interface, simply use [shortcodes](http://codex.wordpress.org/Shortcode) to offer a range of file downloads on your site.
+Secure(ish) File Download prevents unauthorised downloading of files on your WordPress website.
+
+There is no interface, simply use a [WordPress shortcode](http://codex.wordpress.org/Shortcode) to offer a range of file downloads on your site.
 
 ### Examples
 
