@@ -63,11 +63,12 @@ class Secure_File_Download {
 		$matches = array();
 
 		$original_tags  = $shortcode_tags;
-		$shortcode_tags = array( '[secure_download]' => __CLASS__ . '::shortcode_handler' );
-		preg_match_all( '/' . get_shortcode_regex() . '/', $post->post_content, $matches ); // See get_shortcode_regex()
+		$shortcode_tags = array( 'secure_download' => __CLASS__ . '::shortcode_handler' );
+		preg_match_all( '/' . get_shortcode_regex() . '/', $post->post_content, $matches );
 		$shortcode_tags = $original_tags;
 
 		if( isset( $matches[3] ) && is_array( $matches[3] ) ) {
+
 			foreach( $matches[3] as $attributes ) {
 
 				extract( self::get_attributes( shortcode_parse_atts( $attributes ) ) );
