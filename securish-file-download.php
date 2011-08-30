@@ -141,8 +141,10 @@ class Secure_File_Download {
 		if( empty( $secure_download['file'] ) )
 			wp_die( sprintf( __( 'Secure File Download Error: no path provided. Did you specify a %sfile=""%s parameter in the shortcode?', 'sfd' ), '<code>', '</code>' ) );
 
-		if( ( $secure_download['login_required'] === true || $secure_download['login_required'] == 'true' ) && ! is_user_logged_in() )
-			wp_die( sprintf( __( 'Secure File Download Error: you must be logged in to download this file. %sLogin%s', 'sfd' ), '<a href="'.wp_login_url( site_url( 'secure-download/' . $wp_query->query_vars['secure-download'] ) ) . '">', '&nbsp;&raquo;</a>' ) );
+		if( ( $secure_download['login_required'] === true || $secure_download['login_required'] == 'true' ) && ! is_user_logged_in() ) {
+			$redirect_to = ( wp_get_referer() == false ) ? site_url( 'secure-download/' . $wp_query->query_vars['secure-download'] ) : wp_get_referer();
+			wp_die( sprintf( __( 'Secure File Download Error: you must be logged in to download this file. %sLogin%s', 'sfd' ), '<a href="'.wp_login_url( $redirect_to ) . '">', '&nbsp;&raquo;</a>' ) );
+		}
 
 		$path_parts = pathinfo( $secure_download['file'] );
 		$extension  = $path_parts['extension'];
